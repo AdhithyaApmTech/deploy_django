@@ -14,7 +14,7 @@ fetch("http://13.61.143.104/updated_template/")  // Fixed the URL
 
         // Load chatbot script only after HTML is added
         let script = document.createElement("script");
-        script.src = "http://127.0.0.1:8000/static/js/chatbot.js";
+        script.src = "http://13.61.143.104/static/js/updated_bot.js";
         script.onload = function () {
             console.log("✅ Chatbot script loaded, initializing chat history...");
             if (typeof loadChatHistory === "function") {
