@@ -1,16 +1,16 @@
 // Ensure the div with id "django-content" exists
-let contentDiv = document.getElementById("django-content");
-if (!contentDiv) {
-    contentDiv = document.createElement("div");
-    contentDiv.id = "django-content";
-    document.body.appendChild(contentDiv);
+let contentDiv123 = document.getElementById("django-content");
+if (!contentDiv123) {
+    contentDiv123 = document.createElement("div");
+    contentDiv123.id = "django-content";
+    document.body.appendChild(contentDiv123);
 }
 
 // Fetch the chatbot HTML
 fetch("http://13.61.143.104/updated_template/")  // Fixed the URL
     .then(response => response.text())
     .then(html => {
-        contentDiv.innerHTML = html;
+        contentDiv123.innerHTML = html;
 
         // Load chatbot script only after HTML is added
         let script = document.createElement("script");
