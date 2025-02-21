@@ -1,0 +1,377 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chat Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/updated_bot.js' %}"></script>
+    <style>
+        html{
+            overflow: hidden;
+        }
+        .chat-header {
+            position: sticky;
+            top: 0;
+            background: #28a745;
+            color: white;
+            z-index: 10;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            padding: 12px;
+            font-size: 16px;
+        }
+    
+        .chat-box {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            max-height: calc(100% - 70px);
+        }
+    
+        .message-input {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            border-top: 1px solid #ddd;
+            padding: 12px;
+            z-index: 10;
+        }
+    
+        .chat-box .support-message {
+            background-color: #f1f1f1;
+            color: #000;
+            padding: 12px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+    
+        .chat-box .user-message {
+            background-color: #28a745;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+        .button{
+            border: none;
+        }
+
+        #chatMessages {
+            max-height: 440px; /* Adjust height as needed */
+            overflow-y: auto;
+            scrollbar-width: thin; /* Firefox */
+            scrollbar-color: #ccc #f1f1f1; /* Firefox */
+        }
+
+        /* Custom scrollbar for Webkit-based browsers (Chrome, Safari) */
+        #chatMessages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #chatMessages::-webkit-scrollbar-thumb {
+            background-color: #888;
+            border-radius: 4px;
+        }
+
+        #chatMessages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        #sound-toggle:hover{
+        cursor: pointer;
+       }
+
+       .hs-toast-fixed-top {
+            position: fixed;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+        .hs-toast {
+            background: #fe4a5d;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .hs-theme-error {
+            background: #fe4a5d;
+        }
+        audio{
+            width: 17rem;
+        }
+        /* Responsive */
+        @media (max-width: 600px) {
+            .chat-modal {
+                width: 95%;
+                height: 80vh;
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+    
+    </style>
+
+</head>
+<body>
+    <div id="screen" style="display: none;border: 2px solid black;">
+        <p>sharing screen</p>
+        <video id="video_src"></video>
+    </div>
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 px-3 bg-success text-white rounded-top">
+            <h6 class="mb-0">💬 Live Chat</h6>
+            <div class="d-flex align-items-center">
+                <div class="dropdown">
+                    <button class="btn btn-transparent text-white p-1 dropdown-toggle border-0 shadow-none" id="settingsDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-gear-fill fs-5"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li>
+                            <a class="dropdown-item change-option" href="#" data-option="change-name">
+                                <i class="bi bi-pencil-square me-2"></i> Change Name
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item change-option" href="#" data-option="email-transcript">
+                                <i class="bi bi-envelope-paper me-2"></i> Email Transcript
+                            </a>
+                        </li>
+                        <li><a class="dropdown-item" id="sound-toggle" onclick="toggleSound()"><i class="bi bi-volume-up me-2"></i> Sound On</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Messages Container (Fills Available Space) -->
+        <div class="position-relative d-flex flex-column vh-100">
+            <!-- Chat Messages (Scrollable) -->
+            <div class="chat-box flex-grow-1 p-2 overflow-auto" id="chatMessages">
+                <div class="d-flex align-items-start mb-2 flex-column" id="messages_append">
+                    <div class="support-message p-2 mb-2 domain"><strong>Support :</strong> Hello, I am an AI Agent of </div>
+                    {% for i in buttons %}
+                    <div class="support-message p-2 mb-2">
+                        <button onclick="handleButtonClick(this)" class="button">{{i.name}} <strong><i class="bi bi-hand-index-thumb"></i></strong></button>
+                    </div>
+                    {% endfor %}
+                    
+                </div>                        
+            </div>
+        </div>
+
+            <div class="message-input border-top p-3 bg-white">
+                <div id="toastContainer"></div>
+                <div class="hs-toast-wrapper hs-toast-fixed-top" id="toastContainer"></div>
+                <div id="record_display" style="display: none;">
+                    <p>Recording started you can speak now ...</p>
+                    <canvas id="waveform" width="350" height="50"></canvas>
+                    <button id="send-audio" class="btn btn-success p-2 ms-2 shadow-sm">send record</button>
+                </div>
+                <div class="d-flex align-items-center">
+                    <!-- File Attachment Button -->
+                    <label for="fileInput" class="btn btn-outline-secondary rounded-circle p-2 me-2 d-flex align-items-center justify-content-center shadow-sm"
+                           style="width: 40px; height: 40px;" id="fileLabel">
+                        <i class="fas fa-paperclip fa-lg"></i> <!-- Attachment Icon -->
+                    </label>
+                    <input type="file" id="fileInput" class="d-none" disabled>
+
+                    <!-- Selected File Name Display -->
+                    <span id="fileName" class="text-muted small me-2 d-none"></span>
+                    <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+                    <!-- Textarea -->
+                    <input type="text" class="form-control rounded-pill px-3 py-2" placeholder="Type your message..." id="user-input">
+
+
+                    <!-- Send Button -->
+                    <button class="btn btn-success rounded-circle p-2 ms-2 shadow-sm" style="width: 40px; height: 40px;" onclick="ws_sendMessage_button()">
+                        <i class="fas fa-paper-plane fa-lg"></i> <!-- Send Icon -->
+                    </button>
+                    <button class="btn btn-success rounded-circle p-2 ms-2 shadow-sm" style="width: 40px; height: 40px;" title="Complete chat" onclick="room_closed()" disabled id="chatcomplete">
+                        <i class="fa-regular fa-circle-check"></i>
+                    </button>
+                    <button class="btn btn-success rounded-circle p-2 ms-2 shadow-sm" style="width: 40px; height: 40px;" title="Start Recording" disabled id="record" onclick="recorddisplay()">
+                        <i class="bi bi-mic-fill"></i>
+                    </button>
+                    <button class="btn btn-success rounded-circle p-2 ms-2 shadow-sm" style="width: 40px; height: 40px;" title="Start Recording" disabled id="screen_share" onclick="screen_share()">
+                        <i class="fa-solid fa-share-from-square"></i>
+                    </button>
+                </div>
+            </div>
+
+            
+
+            <!-- Change Name / Email Transcript Form (Initially Hidden) -->
+            <div id="tawk-form-container" class="card-container position-absolute top-0 start-0 w-100 h-100 bg-white p-3"
+                 style="display: none; z-index: 10;">
+                <div class="tawk-card tawk-card-inverse tawk-form-input tawk-box-shadow-xsmall tawk-card-small card--form">
+                    <form id="tawk-name-form">
+                        <fieldset>
+                            <div class="tawk-flex tawk-flex-middle tawk-margin-medium">
+                                <p class="tawk-margin-small-left" id="formMessage">Please change your name so we can recognize you the next time.</p>
+                            </div>
+                            <div class="tawk-form-wrapper tawk-margin-small">
+                                <input role="input" id="formInput" required="required" class="form-control" placeholder="Enter here...">
+                            </div>
+                        </fieldset>
+                    </form>
+                    <!-- Added mt-3 to create space between input and buttons -->
+                    <div class="tawk-form-footer tawk-flex tawk-flex-middle tawk-margin-small-top mt-3">
+                        <button type="button" class="btn btn-danger me-2" id="cancelForm">Cancel</button>
+                        <button type="button" class="btn btn-success"><i class="bi bi-send"></i> Submit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <script>
+        document.getElementById("fileLabel").addEventListener("click", function (event) {
+            var fileInput = document.getElementById("fileInput");
+            var toastContainer = document.getElementById("toastContainer");
+
+            if (!toastContainer) {
+                console.error("Toast container not found!");
+                return;
+            }
+
+            if (fileInput.disabled) {
+                showToast({
+                    eleWrapper: "#toastContainer",
+                    msg: "To upload files start with messages",
+                    theme: "error",
+                    autoClose: true,
+                    autoCloseTime: 2000
+                });
+
+                event.preventDefault(); // Prevent file input click
+            }
+        });
+
+        function showToast(option) {
+            var wrapper = document.querySelector(option.eleWrapper);
+            if (!wrapper) {
+                console.error("Toast wrapper element not found!");
+                return;
+            }
+
+            var toast = document.createElement("div");
+            toast.className = "hs-toast hs-theme-" + option.theme.toLowerCase();
+            toast.innerHTML = `
+                <div class="hs-toast-inner">
+                    <div class="hs-toast-msg">${option.msg}</div>
+                </div>`;
+
+            wrapper.appendChild(toast);
+            toast.style.opacity = "0";
+            toast.style.transition = "opacity 0.5s";
+            setTimeout(() => { toast.style.opacity = "1"; }, 10);
+
+            if (option.autoClose) {
+                setTimeout(function () {
+                    toast.style.opacity = "0";
+                    setTimeout(() => toast.remove(), 500);
+                }, option.autoCloseTime || 2000);
+            }
+        }
+   
+
+        var domain_name = window.location.hostname;
+        console.log("domain :",domain_name);
+        var element_name = document.getElementsByClassName("domain")
+        for (var i = 0; i < element_name.length; i++) {
+        element_name[i].innerHTML += `${domain_name}, you can click the buttons below to know more details else you can start conversation by sending message`;
+        }
+        document.getElementById("user-input").addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                ws_sendMessage_button();
+            }
+            });
+    </script>  
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                // var chatContainer = document.getElementById('chatPopup');
+                // chatContainer.style.display = "none";
+                // document.getElementById("chatButton").addEventListener("click", function () {
+                //     var chatContainer = document.getElementById("chatPopup");
+                //     chatContainer.style.display = "block";
+                //     console.log(chatContainer.style.display);
+                //     sessionStorage.setItem("chatcontainer", chatContainer.style.display);
+                // });
+
+                // document.getElementById("closeChat").addEventListener("click", function () {
+                //     var chatContainer = document.getElementById("chatPopup");
+                //     chatContainer.style.display = "none";
+                //     console.log(chatContainer.style.display);
+                //     sessionStorage.setItem("chatcontainer", chatContainer.style.display);
+                // });
+
+                // Handle "Change Name" and "Email Transcript" correctly
+                document.querySelectorAll(".change-option").forEach(item => {
+                    item.addEventListener("click", function (e) {
+                        e.preventDefault();
+                        let option = this.getAttribute("data-option");
+
+                        let chatMessages = document.getElementById("chatMessages");
+                        let messageInput = document.querySelector(".message-input");
+                        let formContainer = document.getElementById("tawk-form-container");
+                        let formMessage = document.getElementById("formMessage");
+                        let formInput = document.getElementById("formInput");
+
+                        if (chatMessages && messageInput && formContainer) {
+                            // Hide chat messages and input area
+                            chatMessages.style.display = "none";
+                            messageInput.style.display = "none";
+                            formContainer.style.display = "block";
+
+                            // Change form content dynamically
+                            if (option === "change-name") {
+                                formMessage.innerText = "Please change your name so we can recognize you the next time.";
+                                formInput.setAttribute("placeholder", "Enter new name...");
+                            } else if (option === "email-transcript") {
+                                formMessage.innerText = "Enter your email to receive a transcript of this chat.";
+                                formInput.setAttribute("placeholder", "Enter your email...");
+                            }
+                        }
+                    });
+                });
+
+                // Handle Cancel Button
+                document.getElementById("cancelForm").addEventListener("click", function () {
+                    let chatMessages = document.getElementById("chatMessages");
+                    let messageInput = document.querySelector(".message-input");
+                    let formContainer = document.getElementById("tawk-form-container");
+
+                    if (chatMessages && messageInput && formContainer) {
+                        formContainer.style.display = "none"; // Hide form
+                        chatMessages.style.display = "block"; // Show chat messages
+                        messageInput.style.display = "block"; // Show input field
+                    }
+                });
+            });
+
+        </script>
+
+        <!-- Font Awesome for icons (if not already included) -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+        <script>
+            document.getElementById('fileInput').addEventListener('change', function (event) {
+                const fileName =event.target.files[0];
+                if(!fileName) return;
+                const fileNameDisplay = document.getElementById('fileName');
+
+                if (fileName) {
+                    fileNameDisplay.textContent = fileName.name;
+                    fileNameDisplay.classList.remove('d-none');
+                    uploadFile(fileName);
+                    fileNameDisplay.classList.add('d-none');
+                } 
+            });
+        </script>
+        <!-- Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

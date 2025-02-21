@@ -1,0 +1,15 @@
+<div class="container">
+    <h2>Email Transcript</h2>
+    <p>Email transcript to:</p>
+
+    <form id="email-form">
+        {% csrf_token %}
+        <input type="email" value="{{name.email}}" style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #ccc;" required id="email-input">
+        <a href="#" class="button cancel">Cancel</a>
+        <button type="submit" class="button submit">Submit</button>
+    </form>
+    <div id="notification" class="notification"></div>
+    <div class="chat-promo">
+        <p>Add free live chat to your site</p>
+    </div>
+</div>

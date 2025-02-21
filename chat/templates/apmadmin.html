@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Chat Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #e8f5e9; /* Light green background */
+        }
+        .nav-tabs .nav-link {
+            color: #2e7d32; /* Dark green text */
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #4caf50; /* Green */
+            color: white;
+        }
+        .list-group-item {
+            background-color: #c8e6c9; /* Light green */
+            border-color: #81c784; /* Green border */
+        }
+        .list-group-item a {
+            color: #1b5e20; /* Dark green text */
+            font-weight: bold;
+        }
+        .modal-content {
+            background-color: #a5d6a7; /* Greenish modal */
+            color: #1b5e20;
+        }
+        .list-group-item-primary {
+            background-color: #66bb6a !important; /* Green user messages */
+            color: white;
+        }
+        .list-group-item-secondary {
+            background-color: #388e3c !important; /* Dark green employee messages */
+            color: white;
+        }
+        .btn-close {
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center text-success">Chat Management Dashboard</h2>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs mt-4" id="chatTabs">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#pending">Pending Chats</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#active">Active Chats</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#completed">Completed Chats</a>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content mt-3">
+            <!-- Pending Chats -->
+            <div class="tab-pane fade show active" id="pending">
+                <h4 class="text-success">Pending Chats</h4>
+                <ul class="list-group">
+                    {% for chat in pending_chats %}
+                        <li class="list-group-item">
+                            <a href="#" class="chat-room" data-room="{{ chat.room_id }}">{{ chat.room_id }}</a> - Created At: {{ chat.created_at }}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No pending chats.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Active Chats -->
+            <div class="tab-pane fade" id="active">
+                <h4 class="text-success">Active Chats</h4>
+                <ul class="list-group">
+                    {% for chat in active_chats %}
+                        <li class="list-group-item">
+                            <a href="#" class="chat-room" data-room="{{ chat.room_id }}">{{ chat.room_id }}</a> - Employee: {{ chat.employee_joined }}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No active chats.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Completed Chats -->
+            <div class="tab-pane fade" id="completed">
+                <h4 class="text-success">Completed Chats</h4>
+                <ul class="list-group">
+                    {% for chat in completed_chats %}
+                        <li class="list-group-item">
+                            <a href="#" class="chat-room" data-room="{{ chat.room_id }}">{{ chat.room_id }}</a> - Completed At: {{ chat.created_at }}
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No completed chats.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Messages Modal -->
+    <div class="modal fade" id="chatModal" tabindex="-1" aria-labelledby="chatModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-success">Chat Messages</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="list-group" id="chatMessages"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap & AJAX Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $(".chat-room").click(function () {
+                var roomId = $(this).data("room");
+                $("#chatModal .modal-title").text("Chat Room: " + roomId);
+
+                $.ajax({
+                    url: "/fetch-messages/" + roomId + "/",
+                    type: "GET",
+                    success: function (response) {
+                        $("#chatMessages").empty();
+                        if (response.messages.length > 0) {
+                            response.messages.forEach(function (msg) {
+                                var senderClass = msg.sender === "user" ? "list-group-item-primary" : "list-group-item-secondary";
+                                $("#chatMessages").append(
+                                    '<li class="list-group-item ' + senderClass + '"><strong>' + msg.sender + ':</strong> ' + msg.content + '</li>'
+                                );
+                            });
+                        } else {
+                            $("#chatMessages").append('<li class="list-group-item text-muted">No messages found.</li>');
+                        }
+                        $("#chatModal").modal("show");
+                    },
+                    error: function () {
+                        alert("Error fetching chat messages.");
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

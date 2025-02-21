@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Caller</title>
+</head>
+<body>
+    <h1>Audio Caller</h1>
+    <button onclick="makeCall()">Start Call</button>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.3.1/dist/peerjs.min.js"></script>
+    <script>
+        const peer = new Peer(); // Create a new PeerJS connection
+        let localStream;
+
+        // Get microphone access
+        async function getAudioStream() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: {echoCancellation:true} });
+                console.log("Microphone access granted.");
+            } catch (error) {
+                console.error("Error accessing microphone:", error);
+            }
+        }
+
+        peer.on("open", id => {
+            console.log("Your PeerJS ID:", id);
+            alert("Share this ID with the receiver: " + id);
+        });
+
+        async function makeCall() {
+            await getAudioStream();
+            const remotePeerId = prompt("Enter Receiver's Peer ID:");
+            const call = peer.call(remotePeerId, localStream);
+            call.on("stream", remoteStream => {
+                playAudio(remoteStream);
+            });
+        }
+
+        function playAudio(stream) {
+            const audio = document.createElement("audio");
+            audio.srcObject = stream;
+            audio.autoplay = true;
+            document.body.appendChild(audio);
+        }
+    </script>
+</body>
+</html>

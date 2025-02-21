@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Employee Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #e8f5e9; }
+       
+        .notification-box { background-color: #ffffff; height: 200px; overflow-y: auto; }
+        .active-chat { background-color: #a5d6a7; }
+        .user-message{
+            background-color: #a5d6a7;
+            color: black;
+        }
+        .employee-message{
+            background-color: #17eb1e;
+            color: black;
+        }
+        .hs-toast-fixed-top {
+            position: fixed;
+            bottom :6rem;
+            right: 3rem;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+        .hs-toast {
+            background: #fe4a5d;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .hs-theme-error {
+            background: #fe4a5d;
+        }
+        .hs-theme-success {
+            background: #93f064;
+        }
+        .hs-theme-transfer {
+            background: #c061be;
+        }
+    </style>
+        
+</head>
+<body>
+    <div class="sharing" style="display: none;position: fixed;top: 50%;left: 50%;transform: translate(-50%, -50%);background: white;padding: 20px;box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);border-radius: 10px;z-index: 1000;text-align: center;">
+        <video id="remoteVideo" autoplay playsinline controls height="50%" width="50%"></video>
+    </div>
+    <div class="container-fluid chat-container">
+        <div class="row" id="chats">
+            <div class="col-3">
+                <div class="card">
+                    <div class="card-header bg-success text-white">Notifications</div>
+                    <div class="card-body notification-box" id="notification-box"></div>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="card">
+                    <div class="card-header bg-success text-white">Chats</div>
+                    <div class="card-body notification-box" id="chat_list"></div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white" id="main_chat_container">Chat</div>
+                    <div class="card-body message-box overflow-auto" style="max-height: 400px;" id="message-box"></div>
+                    <div class="card-footer">
+                        <div id="record_display" style="display: none;">
+                            <p>Recording started you can speak now ...</p>
+                            <canvas id="waveform" width="450" height="70"></canvas>
+                            <button id="send-audio" class="btn btn-success p-2 ms-2 shadow-sm">send record</button>
+                        </div>
+                        <div class="row">
+                            <div class="col-1">
+                                <label for="fileInput" class="btn btn-outline-secondary rounded-circle p-2 me-2 d-flex align-items-center justify-content-center shadow-sm"
+                                style="width: 40px; height: 40px;">
+                                <i class="fas fa-paperclip fa-lg"></i> 
+                                </label>
+                                <input type="file" id="fileInput" class="d-none" disabled>
+                                <span id="fileName" class="text-muted small me-2 d-none"></span>
+                            </div>
+                            <div class="col-4">
+                                <input type="text" id="message-input" class="form-control" disabled>
+                            </div>
+                            <div class="col-1">
+                                <button onclick="sendMessage()" class="btn btn-success" disabled id="send-btn">Send</button>
+                            </div>
+                            <div class="col-1 px-3">
+                                <button class="btn btn-success rounded-circle p-2 ms-2 shadow-sm" style="width: 40px; height: 40px;" title="Start Recording" disabled id="record" onclick="recorddisplay()">
+                                    <i class="bi bi-mic-fill"></i>
+                                </button>
+                            </div>
+                            <div class="col-1">
+                                <button class="btn btn-success rounded-circle p-2 ms-2 shadow-sm" style="width: 40px; height: 40px;" title="request for share their screen" disabled id="screen_share" onclick="request_screen()">
+                                    <i class="fa-solid fa-share-from-square"></i>
+                                </button>
+                            </div>
+                            <div class="col-1">
+                                <audio id="remoteAudio" autoplay></audio>
+                                <button id="startCall" class="btn btn-success" disabled><i class="bi bi-telephone-outbound"></i></button>
+                            </div>
+                            <div class="col-1">
+                                <button id="endCall" disabled class="btn btn-danger"><i class="bi bi-telephone-x-fill"></i></button>
+                            </div>
+                            <div class="col-1">
+                                <button onclick="room_closed()" class="btn btn-success" disabled id="complete-btn"><i class="fa-regular fa-circle-check"></i></button>
+                            </div>
+                            <div class="col-1">
+                                <button id="chat_transfer" disabled class="btn btn-success" onclick="chat_transfer()"><i class="fa-solid fa-arrow-right-arrow-left"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="toastContainer"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    
+    <script>
+
+        document.getElementById("message-input").addEventListener("keypress", function (event) {
+                if (event.key === "Enter") {
+                    sendMessage();
+                }
+            });
+        document.getElementById('fileInput').addEventListener('change', function (event) {
+        const fileName =event.target.files[0];
+        if(!fileName) return;
+        const fileNameDisplay = document.getElementById('fileName');
+
+        if (fileName) {
+            fileNameDisplay.textContent = fileName.name;
+            fileNameDisplay.classList.remove('d-none');
+            console.log("room_id",currentRoomId);
+            uploadFile(fileName,currentRoomId);
+            fileNameDisplay.classList.add('d-none');
+        } 
+        });
+
+        
+
+
+        const employee_id = "employee_" + Date.now().toString();
+        const dashboardSocket = new WebSocket(`ws://${window.location.host}/ws/employee/dashboard/`);
+        let currentRoomId = null;
+        let chatSocket = null;
+        function chat_transfer(){
+            console.log("roomid",currentRoomId);
+            chatSocket.send(JSON.stringify({
+                    type: "chat_transfer",
+                    roomid:currentRoomId,
+                    sender:"employee"
+                }));
+            var transfer = document.getElementById(`${currentRoomId}`).remove();
+            showToast({
+                        eleWrapper: "#toastContainer",
+                        msg: "Chat transferred",
+                        theme: "transfer",
+                        autoClose: true,
+                        autoCloseTime: 2000
+                    });
+        }
+        function uploadFile(file,room_id) {
+            let formData = new FormData();
+            formData.append("file", file);
+            formData.append("room_name", room_id); // Send room name
+            formData.append("sender", employee_id); // Replace with actual sender info
+
+            fetch("/upload-file/", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Notify WebSocket about file upload
+                chatSocket.send(JSON.stringify({
+                    type: "file_upload",
+                    filename: file.name,
+                    file_url: data.file , // URL of uploaded file
+                    sender:"employee"
+                }));
+            })
+            .catch(error => console.error("File upload error:", error));
+        }
+        dashboardSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if(data.type === 'new_room') {
+                const notificationBox = document.getElementById('notification-box');
+                
+                notificationBox.innerHTML += `
+                    <div class="p-2 m-1 bg-light rounded" id="notification_${data.room_id}">
+                        New chat request: ${data.room_id}
+                        <button onclick="acceptRoom('${data.room_id}')" class="btn btn-sm btn-success">Accept</button>
+                    </div>
+                `;
+            }
+            else if(data.type === 'room_accepted') {
+                const notificationElement = document.getElementById(`notification_${data.room_id}`);
+                if (notificationElement) {
+                    notificationElement.remove();
+                }
+                if(employee_id==data.employee){
+                    const notificationBox = document.getElementById('chat_list');
+                    notificationBox.innerHTML += `
+                        <div class="p-2 m-1 bg-light rounded" id="${data.room_id}">
+                            New chat request: ${data.room_id}
+                            <button onclick="startChat('${data.room_id}')" class="btn btn-sm">Click to start chat</button>
+                        </div>
+                    `;
+                    saveChatListToSession();
+                }
+            }
+        };
+        function loadChatListFromSession() {
+            const notificationBox = document.getElementById('chat_list');
+            const savedContent = sessionStorage.getItem('chat_list_content');
+            
+            if (savedContent) {
+                notificationBox.innerHTML = savedContent; // Restore saved content
+            }
+        }
+
+        function saveChatListToSession() {
+            const notificationBox = document.getElementById('chat_list');
+            sessionStorage.setItem('chat_list_content', notificationBox.innerHTML);
+        }
+        function acceptRoom(roomId) {
+            dashboardSocket.send(JSON.stringify({
+                'type': 'accept_room',
+                'room_id': roomId,
+                'employee_id':employee_id
+            }));
+        }
+
+        async function recorddisplay(){
+            let mediaRecorder;
+            let audioChunks = [];
+            var display_message = document.getElementById("record_display");
+            if (display_message.style.display=="none"){
+                display_message.style.display="block";
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { 
+                    echoCancellation: true, 
+                    noiseSuppression: true, 
+                    autoGainControl: true  } 
+                });
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.start();
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                startWaveformVisualization(stream);
+                document.getElementById("send-audio").addEventListener("click", async () => {
+                    mediaRecorder.stop();
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+                        const formData = new FormData();
+                        formData.append("file", audioBlob);
+                        formData.append("room_name", currentRoomId);
+                        formData.append("sender", "employee");
+                        stopWaveformVisualization();
+                        fetch("/upload-file/", {
+                            method: "POST",
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            // Notify WebSocket about file upload
+                            chatSocket.send(JSON.stringify({
+                                type: "audio_upload",
+                                filename:currentRoomId,
+                                file_url: data.file , // URL of uploaded file
+                                sender:"employee"
+                            }));
+                        })
+                        .catch(error => console.error("File upload error:", error));
+                        audioChunks = [];
+                        display_message.style.display="none";
+                    };
+                });
+            }else{
+                display_message.style.display="none";
+            }
+        }
+
+        let audioContext, analyser, source, canvas, canvasCtx;
+        function startWaveformVisualization(stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 1024;
+
+            source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+
+            canvas = document.getElementById("waveform");
+            canvasCtx = canvas.getContext("2d");
+
+            function drawWaveform() {
+                requestAnimationFrame(drawWaveform);
+
+                let bufferLength = analyser.frequencyBinCount;
+                let dataArray = new Uint8Array(bufferLength);
+                analyser.getByteTimeDomainData(dataArray);
+
+                // **Green Gradient Background**
+                let gradientBg = canvasCtx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                gradientBg.addColorStop(0, "#043927"); // Dark Green
+                gradientBg.addColorStop(1, "#0f6b37"); // Lighter Green
+
+                canvasCtx.fillStyle = gradientBg;
+                canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // **Wave Style Settings**
+                let gradientWave = canvasCtx.createLinearGradient(0, 0, canvas.width, 0);
+                gradientWave.addColorStop(0, "#00ff99"); // Neon Green
+                gradientWave.addColorStop(1, "#33ff33"); // Light Green
+
+                canvasCtx.lineWidth = 3;
+                canvasCtx.strokeStyle = gradientWave;
+                canvasCtx.beginPath();
+
+                let sliceWidth = canvas.width / bufferLength;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    let y = (dataArray[i] / 128.0) * (canvas.height / 2);
+
+                    if (i === 0) {
+                        canvasCtx.moveTo(x, y);
+                    } else {
+                        canvasCtx.lineTo(x, y);
+                    }
+                    x += sliceWidth;
+                }
+
+                canvasCtx.lineTo(canvas.width, canvas.height / 2);
+                canvasCtx.stroke();
+            }
+
+            drawWaveform();
+        }
+
+
+        function stopWaveformVisualization() {
+            if (audioContext) {
+                audioContext.close();
+            }
+        }
+
+        function request_screen(){
+                chatSocket.send(JSON.stringify({
+                    type:"request",
+                    message:"request for screen share",
+                    sender:"employee"
+                }))
+                showToast({
+                        eleWrapper: "#toastContainer",
+                        msg: "Screen share request sent successfully !!",
+                        theme: "transfer",
+                        autoClose: true,
+                        autoCloseTime: 2000
+                    });
+            }
+        function startChat(roomId) {
+            document.getElementById('message-input').disabled = false;
+            document.getElementById('send-btn').disabled = false;
+            document.getElementById("fileInput").disabled = false;
+            document.getElementById("complete-btn").disabled = false;
+            document.getElementById("record").disabled = false;
+            document.getElementById("startCall").disabled = false;
+            document.getElementById("chat_transfer").disabled = false;
+            document.getElementById("screen_share").disabled = false;
+            document.getElementById("message-box").innerHTML = "";
+            currentRoomId = roomId;
+            fetchMessages(currentRoomId);
+            async function fetchMessages(currentRoomId) {
+                const response = await fetch(`/get_messages/${currentRoomId}/`);
+                    const data = await response.json();
+                    console.log("file_uploads",data.files);
+                    if (data.messages) {
+                        const chatBox = document.getElementById("message-box");
+                        chatBox.innerHTML = "";  // Clear chat box before reloading
+
+                        data.messages.forEach(msg => {
+                            if(msg.sender == "user"){
+                                chatBox.innerHTML += `<div class="p-2 m-2 rounded user-message" id="temp_msg">${msg.sender} :
+                        ${msg.content}
+                    </div>`;
+                            } else if(msg.sender == "bot"){
+                                chatBox.innerHTML += `<div class="p-2 m-2 rounded employee-message" id="temp_msg"> Bot :
+                        ${msg.content}
+                    </div>`;
+                            }else{
+                                chatBox.innerHTML += `<div class="p-2 m-2 rounded employee-message" id="temp_msg"> You :
+                                    ${msg.content}
+                                </div>`;
+                            }
+                        });
+
+                        data.files.forEach(file => {
+                            const messageClass = file.sender === 'user' ? 'user-message' : 'employee-message';
+                            if(file.filename.startsWith("blob_")){
+                                if(file.sender=='user'){
+                                chatBox.innerHTML += `
+                                <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> ${file.sender} :
+                                    <audio src="${file.file_url}" controls>${file.filename}</audio>
+                                </div>`;
+                                }else{
+                                    chatBox.innerHTML += `
+                                    <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> You :
+                                        <audio src="${file.file_url}" controls>${file.filename}</audio>
+                                    </div>`;
+                                }
+                            }else{
+                                if(file.sender=='user'){
+                                chatBox.innerHTML += `
+                                <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> ${file.sender} :
+                                    <a href="${file.file_url}" target="_blank">${file.filename}</a>
+                                </div>`;
+                                }else{
+                                    chatBox.innerHTML += `
+                                    <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> You :
+                                        <a href="${file.file_url}" target="_blank">${file.filename}</a>
+                                    </div>`;
+                                }
+                            }
+                        })
+                        // Scroll to bottom
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+                }
+            if(chatSocket) chatSocket.close();
+            chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${roomId}/`);
+            const startCallBtn = document.getElementById("startCall");
+            const endCallBtn = document.getElementById("endCall");
+            const remoteAudio = document.getElementById("remoteAudio");
+            let peerConnection;
+            let iceCandidateQueue = [];
+            const config = {
+                iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+            };
+            chatSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                const messageBox = document.getElementById('message-box');
+                if (data.message_type === "file_upload") {
+                    // Handle file upload messages
+                    const messageClass = data.sender === 'user' ? 'user-message' : 'employee-message';
+                    if (data.sender=='user'){
+                        messageBox.innerHTML += `
+                        <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> ${data.sender} :
+                            <a href="${data.file_url}" target="_blank">${data.filename}</a>
+                        </div>`;
+                    }else{
+                        messageBox.innerHTML += `
+                        <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> You :
+                            <a href="${data.file_url}" target="_blank">${data.filename}</a>
+                        </div>`;
+                    }
+                }else if(data.message_type === "audio_upload"){
+                    const messageClass = data.sender === 'user' ? 'user-message' : 'employee-message';
+                    if(data.sender == "user"){
+                        messageBox.innerHTML += `
+                        <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> ${data.sender} :
+                            <audio src="${data.file_url}" controls>${data.filename}</audio>
+                        </div>
+                    `;
+                    }else{
+                        messageBox.innerHTML += `
+                        <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> You :
+                            <audio src="${data.file_url}" controls>${data.filename}</audio>
+                        </div>
+                    `;
+                    }
+                    
+                }else if (data.message_type === "offer"){
+                     if(data.sender=="user"){
+                        handleOffer(data.message);
+                     }
+                }else if (data.message_type === "answer"){
+                    if(data.sender=="user"){
+                        handleAnswer(data.message);
+                    }
+                }else if (data.message_type === "ice-candidate"){
+                    if(data.sender=="user"){
+                        handleICECandidate(data.message);
+                    }
+                }else if (data.message_type === "call-ended"){
+                    const messageClass = data.sender === 'user' ? 'user-message' : 'employee-message';
+                    if(data.sender=="user"){
+                        peerConnection.close();
+                        startCallBtn.disabled = false;
+                        endCallBtn.disabled = true;
+                        messageBox.innerHTML += `
+                        <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> ${data.sender} :
+                            ${data.message}
+                        </div>
+                    `;
+                    }
+                }else if (data.message_type === "request_cancel"){
+                    const messageClass = data.sender === 'user' ? 'user-message' : 'employee-message';
+                    if(data.sender=="user"){
+                        messageBox.innerHTML += `
+                        <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> ${data.sender} :
+                            ${data.message}
+                        </div>
+                    `;
+                    }
+                }else if (data.message_type === "share"){
+                    if(data.sender=="user"){
+                        var popup = document.querySelector(".sharing"); // Use class selector
+                        if (popup) {  
+                            popup.style.display = "block"; // ✅ Show the div
+                            screenshare(data.message);  // Call the function after showing the div
+                        } else {
+                            console.error("Popup element not found!");  // 🚨 Debugging message
+                        }
+                    }
+                }else if (data.message_type==="stop-sharing"){
+                    const messageClass = data.sender === 'user' ? 'user-message' : 'employee-message';
+                    if(data.sender=="user"){
+                        messageBox.innerHTML += `
+                        <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> ${data.sender} :
+                            ${data.message}
+                        </div>
+                    `;
+                        var popup = document.querySelector(".sharing"); // Use class selector
+                        if (popup) {  
+                            popup.style.display = "none"; // ✅ Show the div
+                        } else {
+                            console.error("Popup element not found!");  // 🚨 Debugging message
+                        }
+                    }
+                }
+                else{
+                    if(data.message_type!=="accept" && data.message_type!=="request"){
+                        const messageClass = data.sender === 'user' ? 'user-message' : 'employee-message';
+                    if(data.sender=='user'){
+                        messageBox.innerHTML += `
+                        <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> ${data.sender} :
+                            ${data.message}
+                        </div>
+                    `;
+                    }else{
+                        messageBox.innerHTML += `
+                        <div class="p-2 m-2 rounded ${messageClass}" id="temp_msg"> You :
+                            ${data.message}
+                        </div>
+                    `;
+                    }
+                    }
+                }
+                messageBox.scrollTop = messageBox.scrollHeight;
+            };
+            startCallBtn.onclick = async () => {
+                peerConnection = new RTCPeerConnection(config);
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        chatSocket.send(JSON.stringify({
+                            type: "ice-candidate",
+                            sender:"employee",
+                            message: event.candidate 
+                        }));
+                        console.log("ice from sender",event.candidate);
+                    }
+                };
+                peerConnection.ontrack = (event) => {
+                    remoteAudio.srcObject = event.streams[0];
+                };
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    
+                    chatSocket.send(JSON.stringify({
+                        type: "offer",
+                        sender:"employee",
+                        message: offer
+                        
+                    }));
+                    console.log("offer from sender",offer);
+                    startCallBtn.disabled = true;
+                    endCallBtn.disabled = false;
+                };
+
+            endCallBtn.onclick = () => {
+                peerConnection.close();
+                startCallBtn.disabled = false;
+                endCallBtn.disabled = true;
+            };
+            async function handleOffer(offer) {
+                peerConnection = new RTCPeerConnection(config);
+                peerConnection.ontrack = (event) => {
+                    remoteAudio.srcObject = event.streams[0];
+                };
+
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+
+                chatSocket.send(JSON.stringify({
+                    type: "answer",
+                    message: answer,
+                    sender:"employee"
+                }));
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        chatSocket.send(JSON.stringify({
+                            type: "ice-candidate",
+                            message: event.candidate,
+                            sender :"employee"
+                        }));
+                    }
+                };
+            }
+
+            async function handleAnswer(answer) {
+                console.log("receiver answer",answer);
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            }
+            
+            // async function screenshare(answer){
+            //     const remoteVideo = document.getElementById("remoteVideo");
+            //     peerConnection = new RTCPeerConnection(config);
+            //     peerConnection.ontrack = (event) => {
+            //         if (!remoteVideo.srcObject) {
+            //             remoteVideo.srcObject = new MediaStream();
+            //         }
+                    
+            //         event.streams[0].getTracks().forEach(track => {
+            //             console.log("Received track:", track.kind);
+            //             remoteVideo.srcObject.addTrack(track);
+            //         });
+
+            //         // Ensure playback starts
+            //         remoteVideo.muted = false;
+            //         remoteVideo.play().catch(e => console.error("Error playing received video:", e));
+            //     };
+            //     peerConnection.onicecandidate = (event) => {
+            //         if (event.candidate) {
+            //             chatSocket.send(JSON.stringify({
+            //                 type: "ice-candidate",
+            //                 message: event.candidate,
+            //                 sender:"employee"
+            //             }));
+            //         }
+            //     };
+            //     await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            //     const answer_receiver = await peerConnection.createAnswer();
+            //     await peerConnection.setLocalDescription(answer_receiver);
+            //     chatSocket.send(JSON.stringify({
+            //         type: "accept",
+            //         message: answer_receiver,
+            //         sender:"employee"
+            //     }));
+                
+            //     peerConnection.addEventListener('connectionstatechange', event => {
+            //         if (peerConnection.connectionState === 'connected') {
+            //             console.log("connected");
+            //         }
+            //     });
+            // }
+
+            async function screenshare(answer) {
+                const remoteVideo = document.getElementById("remoteVideo");
+                peerConnection = new RTCPeerConnection(config);
+
+                peerConnection.ontrack = (event) => {
+                    if (!remoteVideo.srcObject) {
+                        remoteVideo.srcObject = new MediaStream();
+                    }
+
+                    event.streams[0].getTracks().forEach(track => {
+                        console.log("Received track:", track.kind);
+                        remoteVideo.srcObject.addTrack(track);
+
+                        // Handle track end (Sender Stopped Sharing)
+                        track.onended = () => {
+                            console.log(`Track ended: ${track.kind}, stopping stream`);
+                            stopSharingReceiver();
+                        };
+                    });
+
+                    // Ensure playback starts
+                    remoteVideo.muted = false;
+                    remoteVideo.play().catch(e => console.error("Error playing received video:", e));
+                };
+
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        chatSocket.send(JSON.stringify({
+                            type: "ice-candidate",
+                            message: event.candidate,
+                            sender: "employee"
+                        }));
+                    }
+                };
+
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                const answer_receiver = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer_receiver);
+                
+                chatSocket.send(JSON.stringify({
+                    type: "accept",
+                    message: answer_receiver,
+                    sender: "employee"
+                }));
+                
+                peerConnection.addEventListener('connectionstatechange', event => {
+                    if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'closed') {
+                        console.log("Connection closed, stopping stream");
+                        stopSharingReceiver();
+                    }
+                });
+
+                function stopSharingReceiver() {
+                    if (remoteVideo.srcObject) {
+                        remoteVideo.srcObject.getTracks().forEach(track => track.stop());
+                        remoteVideo.srcObject = null;
+                    }
+                    if (peerConnection) {
+                        peerConnection.close();
+                    }
+                    console.log("Screen sharing stopped on receiver side.");
+                }
+            }
+
+            async function handleICECandidate(candidate) {
+                    if (peerConnection) {
+                        // If peerConnection is ready, add ICE candidate
+                        peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(console.error);
+                    } else {
+                        // Otherwise, store in queue until peerConnection is initialized
+                        iceCandidateQueue.push(candidate);
+                        console.log("storing ice candidates");
+                    }
+            }
+        }
+
+        function room_closed() {
+            if (!currentRoomId) {
+                console.error("No room is currently active.");
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append("room_id", currentRoomId);  // Use currentRoomId dynamically
+            fetch("/room_update_status/", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "Success") {
+                    showToast({
+                        eleWrapper: "#toastContainer",
+                        msg: "Chat marked as completed!",
+                        theme: "success",
+                        autoClose: true,
+                        autoCloseTime: 2000
+                    });
+                }
+            })
+            .catch(error => console.error("Error updating status:", error));
+        }
+        
+        function showToast(option) {
+            var wrapper = document.querySelector(option.eleWrapper);
+            if (!wrapper) {
+                console.error("Toast wrapper element not found!");
+                return;
+            }
+
+            var toast = document.createElement("div");
+            toast.className = "hs-toast hs-theme-" + option.theme.toLowerCase();
+            toast.innerHTML = `
+                <div class="hs-toast-inner">
+                    <div class="hs-toast-msg">${option.msg}</div>
+                </div>`;
+
+            wrapper.appendChild(toast);
+            toast.style.opacity = "0";
+            toast.style.transition = "opacity 0.5s";
+            setTimeout(() => { toast.style.opacity = "1"; }, 10);
+
+            if (option.autoClose) {
+                setTimeout(() => {
+                    toast.style.opacity = "0";
+                    setTimeout(() => toast.remove(), 500);
+                }, option.autoCloseTime || 2000);
+            }
+        }
+        function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value;
+            if(message && chatSocket) {
+                chatSocket.send(JSON.stringify({
+                    'message': message,
+                    'sender': 'employee'
+                }));
+                messageInput.value = '';
+            }
+        }
+        document.addEventListener("DOMContentLoaded", loadChatListFromSession);
+    </script>
+</body>
+</html>
+
+
+
+

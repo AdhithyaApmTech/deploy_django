@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title style="color: green;">Welcome to Dashboard</title>
+    <style>
+        .container {
+            text-align: center;
+            margin: 10px auto;
+            max-width: 500px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: green;
+            font-weight: bold;
+        }
+
+        img {
+            width: 60%;
+        }
+    </style>
+</head>
+<body>
+    <a href="{% url 'logout' %}">Logout</a>
+    <h1>Welcome to User Dashboard {{name.username}}</h1>
+    <input type="hidden" value="{{name.id}}" id="userid">
+    <input type="hidden" value="{{name.username}}" id="username">
+    <!-- <div class="container">
+        <img src="https://i.ibb.co/RNB6jpM/welcome.gif" alt="Welcome Cartoon">
+    </div> -->
+
+    <h2>Chat</h2>
+    <!-- chat/templates/chat/user_chat.html -->
+    <div id="chat">
+        <div id="chat-log"></div>
+        <input id="chat-message-input" type="text" />
+        <button id="chat-message-submit">Send</button>
+    </div>
+
+    <script>
+        let chatSocket = null;
+        let chatRoomId = null;
+    
+        async function getChatRoomId() {
+            const userId = document.querySelector('#userid').value;
+            const response = await fetch('/chat/get_or_create_room/', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ user_id: userId })
+            });
+    
+            const data = await response.json();
+            return data.chat_room_id;
+        }
+    
+        async function sendMessage() {
+            const messageInput = document.querySelector('#chat-message-input');
+            const message = messageInput.value.trim();
+    
+            if (!message) return; // Prevent sending empty messages
+    
+            // If chatRoomId doesn't exist, create the room and establish the WebSocket connection
+            if (!chatRoomId) {
+                chatRoomId = await getChatRoomId();
+                chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${chatRoomId}/`);
+    
+                chatSocket.onmessage = function (e) {
+                    const data = JSON.parse(e.data);
+                    console.log("data_sender",data.sender);
+                    console.log("data_sender",data.message);
+                    var username = document.getElementById("username").value;
+                    console.log("username",username);
+                    if (username == data.sender){
+                        document.querySelector('#chat-log').innerHTML += `<div>You : ${data.message}</div>`;
+                    }else{
+                        document.querySelector('#chat-log').innerHTML += `<div>${data.sender}: ${data.message}</div>`;
+                    }
+                };
+    
+                // Wait for WebSocket connection to open before sending the first message
+                chatSocket.onopen = function () {
+                    const userId = document.querySelector('#userid').value;
+                    chatSocket.send(JSON.stringify({ 'type': 'message', 'message': message ,"userid":userId}));
+                };
+            } else {
+                const userId = document.querySelector('#userid').value;
+                // If WebSocket already exists, just send the message
+                chatSocket.send(JSON.stringify({ 'type': 'message', 'message': message,"userid":userId }));
+            }
+    
+            messageInput.value = ''; // Clear input after sending
+        }
+    
+        document.querySelector('#chat-message-submit').addEventListener('click', sendMessage);
+        
+    </script>
+    
+</body>
+</html>

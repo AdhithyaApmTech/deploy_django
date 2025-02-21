@@ -1,0 +1,316 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Chatbot</title>
+        <link rel="stylesheet" href="{% static 'css/chatbot.css' %}">
+        <link rel="stylesheet" href="{% static 'css/name_change.css' %}">
+        <link rel="stylesheet" href="http://127.0.0.1:8000/static/css/chatbot.css">
+        <script src="{% static 'js/chatbot.js' %}"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <h1>From django</h1>
+    <p>Look bottom right for chatbot icon</p>
+    <div id="notification" class="notification"></div>
+    <div id="chat-widget">
+        
+        <button id="chat-toggle" onclick="toggleChat()">💬</button>
+        
+        <button id="chat-close" onclick="closeChat()">X</button>
+        
+        <div class="chat-container" id="chat-container">
+            <div id="emoji-picker" style="display:none; position:absolute; top:50px; left:50%; transform: translateX(-50%); width: 350px; height: 250px; overflow-y: scroll;">
+                <!-- Emoji Picker will be inserted here -->
+            </div>
+            <button id="menu"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" class="bi bi-list" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/>
+              </svg></button>
+              <div id="onclick_menu">
+                  <a href="#" class="anchor_tag" id="name_change">change name</a><br><hr>
+                <a href="#" class="anchor_tag" id="email-option">email</a><br><hr>
+                <a href="#" class="anchor_tag" id="popout-widget" onclick="closeChat()">pop out widget</a><br><hr>
+                <a class="anchor_tag" id="sound-toggle" onclick="toggleSound()">Sound On</a>
+              </div>
+
+            <div class="chat-box" id="chat-box">
+                <div class="message bot-message domain">Hello, I am an AI Agent of </div>
+                {% for i in buttons %}
+                <button onclick="handleButtonClick(this)" class="message bot-message">{{i.name}}</button>
+                {% endfor %}
+                
+
+            </div>
+            <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+            <!-- <input type="text" id="user-input" placeholder="Type a message..." /> -->
+            <div class="input-container">
+                <input type="text" id="user-input" placeholder="Type a message..."/>
+                <button id="file-btn" class="file-btn">📎</button>
+                <button id="emoji-btn" class="emoji-btn">😊</button>
+                <input type="file" id="file-upload" class="file-upload" style="display:none" />
+            </div>
+            <button onclick="sendMessage()" class="send-button">Send</button>
+        </div>
+        
+    </div>
+    {% block dynamic %}
+    
+    <a href="/privacy">Privacy</a>
+    <a href="/form_datas">Submitted Details</a>
+    {% endblock %}
+    <script>
+        $(document).ready(function() {
+            var btn = $('#button');
+            var chatBox = $('#chat-box'); // Target the chat box instead of window
+    
+            // Detect scrolling inside chat-box
+            chatBox.scroll(function() {
+                if (chatBox.scrollTop() > 50) {
+                    btn.addClass('show');
+                } else {
+                    btn.removeClass('show');
+                }
+            });
+    
+            // Scroll to top when button is clicked
+            btn.on('click', function(e) {
+                e.preventDefault();
+                chatBox.animate({ scrollTop: 0 }, 300); // Smooth scroll inside chat-box
+            });
+        });
+    </script>
+    
+    
+    <script>
+        var domain_name = window.location.hostname;
+        console.log("domain :",domain_name);
+        var element_name = document.getElementsByClassName("domain")
+        for (var i = 0; i < element_name.length; i++) {
+        element_name[i].innerHTML += domain_name;
+        document.getElementById("user-input").addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    });
+    }
+    </script>   
+    
+    <script>
+        $(document).ready(function(){
+          $("#menu").click(function(event){
+            event.stopPropagation(); // Prevents click from bubbling up
+            $("#onclick_menu").stop().fadeToggle(300).toggleClass("active1");
+          });
+      
+          // Hide menu when clicking outside
+          $(document).click(function(event) {
+            if (!$(event.target).closest("#menu, #onclick_menu").length) {
+              $("#onclick_menu").fadeOut(300).removeClass("active1");
+            }
+          });
+        });
+      </script>
+      <script>
+        document.getElementById('email-option').addEventListener('click', function(event) {
+            event.preventDefault();
+            fetch('/email-template/')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('chat-container').innerHTML = html;
+                });
+        });
+    </script>
+      <script>
+        document.getElementById('name_change').addEventListener('click', function(event) {
+            event.preventDefault();
+            fetch('/name_change/')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('chat-container').innerHTML = html;
+                });
+        });
+    </script>
+      <script>
+        document.addEventListener('submit', function(event) {
+        if (event.target.id === 'validity-form') {
+            event.preventDefault();  // Prevent default form submission
+            const form = event.target;
+            const formData = new FormData(form);
+
+            fetch('/user_input_view/', {  // Ensure this is the correct Django view URL
+                method: 'POST',   // Make sure this is POST, not GET
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const notification = document.getElementById('notification');
+                notification.textContent = data.message;
+                notification.className = data.status === 'success' ? 'notification success' : 'notification error';
+                notification.style.display = 'block';
+
+                if (data.status === "success") {
+                    form.reset(); // Clear form after successful submission
+                }
+
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 2000);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    });
+
+    </script>
+
+      <script>
+        document.addEventListener('submit', function(event) {
+        if (event.target.id === 'name-form') {
+            event.preventDefault();  // Prevent default form submission
+            
+            const form = event.target;
+            const nameInput = document.getElementById("name-input").value;
+
+            // Prepare data to send with the request
+            const data = {
+                name: nameInput
+            };
+
+            fetch("/update_name/", {  // Ensure this is your correct Django endpoint
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",  // Make sure the content type is JSON
+                    "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value  // CSRF token
+                },
+                body: JSON.stringify(data)  // Send the new name as JSON data
+            })
+            .then(response => response.json())
+            .then(data => {
+                const notification = document.getElementById("notification");
+                notification.textContent = data.message;
+                notification.className = "notification " + (data.status === "success" ? "success" : "error");
+                notification.style.display = "block";
+
+
+                // If the status is 'success', redirect to another page
+                if (data.status === "success") {
+                    setTimeout(() => {
+                        window.location.href = "/chat-widget/";  // Replace with your desired URL
+                    }, 2000);  // Wait 2 seconds before redirecting
+                }
+                // Hide the notification after 2 seconds
+                setTimeout(() => {
+                    notification.style.display = "none";
+                }, 2000);
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+        }
+    });
+
+      </script>
+
+<script>
+    document.addEventListener('submit', function(event) {
+    if (event.target.id === 'email-form') {
+        event.preventDefault();  // Prevent default form submission
+        
+        const form = event.target;
+        const emailInput = document.getElementById("email-input").value;
+
+        // Prepare data to send with the request
+        const data = {
+            email: emailInput
+        };
+
+        fetch("/update_email/", {  // Ensure this is your correct Django endpoint
+            method: "POST",
+            headers: {
+                "Accept": "application/json",  // Make sure the content type is JSON
+                "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value  // CSRF token
+            },
+            body: JSON.stringify(data)  // Send the new name as JSON data
+        })
+        .then(response => response.json())
+        .then(data => {
+            const notification = document.getElementById("notification");
+            notification.textContent = data.message;
+            notification.className = "notification " + (data.status === "success" ? "success" : "error");
+            notification.style.display = "block";
+
+
+            // If the status is 'success', redirect to another page
+            if (data.status === "success") {
+                setTimeout(() => {
+                    window.location.href = "/chat-widget/";  // Replace with your desired URL
+                }, 2000);  // Wait 2 seconds before redirecting
+            }
+            // Hide the notification after 2 seconds
+            setTimeout(() => {
+                notification.style.display = "none";
+            }, 2000);
+        })
+        .catch(error => {
+            console.error("Error:", error);
+        });
+    }
+});
+
+  </script>
+    <script>
+    // File Upload Button Functionality
+    document.getElementById('file-btn').addEventListener('click', function () {
+        document.getElementById('file-upload').click(); // Trigger file input click
+    });
+
+    // Handle File Upload
+    document.getElementById('file-upload').addEventListener('change', function (event) {
+        const file = event.target.files[0]; // Get the first file
+        if (file) {
+            alert(`File selected: ${file.name}`); // You can handle file upload here
+        }
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
+<script>
+    // Initialize the Emoji picker
+    const pickerOptions = { 
+      onEmojiSelect: function(emoji) {
+        const userInput = document.getElementById('user-input');
+        userInput.value += emoji.native; // Append emoji to input field
+        userInput.focus(); // Keep focus on input field after emoji is selected
+      }
+    };
+  
+    const picker = new EmojiMart.Picker(pickerOptions);
+  
+    // Append the picker to the emoji picker container
+    document.getElementById('emoji-picker').appendChild(picker);
+  
+    // Toggle the visibility of the emoji picker when the emoji button is clicked
+    $('#emoji-btn').click(function () {
+      const pickerContainer = $('#emoji-picker');
+  
+      // Toggle display between block and none with jQuery
+      if (pickerContainer.is(':visible')) {
+        pickerContainer.hide(); // Hide the picker
+      } else {
+        pickerContainer.show(); // Show the picker
+      }
+    });
+  </script>
+
+<script src="http://127.0.0.1:8000/static/js/popout.js"></script>
+<script src="http://127.0.0.1:8000/static/js/chatbot.js"></script>
+</body>
+</html>
+
+

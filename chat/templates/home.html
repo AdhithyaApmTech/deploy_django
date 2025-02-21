@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title style="color: green;">Welcome to Dashboard</title>
+    <style>
+        .container {
+            text-align: center;
+            margin: 100px auto;
+            max-width: 500px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: green;
+            font-weight: bold;
+        }
+
+        img {
+            width: 60%;
+        }
+    </style>
+</head>
+<body>
+    <a href="{% url 'logout' %}">Logout</a>
+    <input type="hidden" value="{{name.id}}" id="userid">
+    <input type="hidden" value="{{name.username}}" id="username">
+    <h1>Welcome to Employee Dashboard {{name.username}}</h1>
+    <h2>Chat</h2>
+    <!-- chat/templates/chat/employee_dashboard.html -->
+    <div id="notifications"></div>
+    <div id="chat">
+        <div id="chat-log"></div>
+        <input id="chat-message-input" type="text" />
+        <button id="chat-message-submit">Send</button>
+    </div>
+    <script>
+        const notificationSocket = new WebSocket(`ws://${window.location.host}/ws/employee_dashboard/`);
+        notificationSocket.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+    
+            // When new notification arrives, show it with an Accept button
+            if (data.type === 'new_notification') {
+                const notificationId = `notification-${data.chat_room_id}`;
+                document.querySelector('#notifications').innerHTML += `
+                    <div id="${notificationId}">
+                        New Chat: ${data.chat_room_id}
+                        <input type="hidden" id="chat-message-input-${data.chat_room_id}" value="Accepted"/>
+                        <button id="chat-message-submit-${data.chat_room_id}" onclick="acceptChat(${data.chat_room_id})">Accept</button>
+                    </div>
+                `;
+            }
+    
+            // Remove notification when accepted
+            else if (data.type === 'notification_removed') {
+                document.querySelector(`#notification-${data.chat_room_id}`).remove();
+            }
+        };
+    
+        // Function to handle Accept button click
+        function acceptChat(chatRoomId) {
+            // Notify server that the chat room is being accepted
+            console.log("chatroomid", chatRoomId);
+            notificationSocket.send(JSON.stringify({
+                'type': 'accept_chat',
+                'chat_room_id': chatRoomId,
+            }));
+    
+            // Establish WebSocket connection to send messages to the chat room
+            const chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${chatRoomId}/`);
+            
+            // Handle incoming chat messages
+            chatSocket.onmessage = function (e) {
+                const data = JSON.parse(e.data);
+                console.log("data_sender",data.sender);
+                console.log("data_sender",data.message);
+                var username = document.getElementById("username").value;
+                console.log("username",username);
+                if (username == data.sender){
+                        document.querySelector('#chat-log').innerHTML += `<div>You : ${data.message}</div>`;
+                        console.log("one");
+                    }else{
+                        document.querySelector('#chat-log').innerHTML += `<div>${data.sender} : ${data.message}</div>`;
+                    }
+            };
+    
+            document.querySelector('#chat-message-submit').onclick = function(e) {
+                const messageInputField = document.querySelector("#chat-message-input");
+                var userid = document.getElementById("userid").value;
+                const message = messageInputField.value.trim();
+        
+                if (message) {
+                    console.log("userid", userid);
+                    // Send the message via WebSocket
+                    chatSocket.send(JSON.stringify({
+                        'type': 'accept_chat',
+                        'message': message,
+                        'userid': userid
+                    }));
+                    messageInputField.value = ''; // Clear the input
+                    console.log(message);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,15 @@
+<div class="d-flex align-items-center">
+    <label for="fileInput"
+        class="btn btn-outline-secondary rounded-circle p-2 me-2 d-flex align-items-center justify-content-center shadow-sm"
+        style="width: 40px; height: 40px;">
+        <i class="fas fa-paperclip fa-lg"></i>
+    </label>
+    <input type="file" id="fileInput" class="d-none">
+    <span id="fileName" class="text-muted small me-2 d-none"></span>
+    <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+    <input type="text" class="form-control rounded-pill px-3 py-2" placeholder="Type your message..." id="user-input">
+    <button class="btn btn-success rounded-circle p-2 ms-2 shadow-sm" style="width: 40px; height: 40px;"
+        onclick="ws_sendMessage_button()">
+        <i class="fas fa-paper-plane fa-lg"></i>
+    </button>
+</div>

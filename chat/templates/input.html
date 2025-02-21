@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+    
+        #user-input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-left: 5px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s ease;
+            width: 100%;
+        }
+    
+        #file-btn, #emoji-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    
+        #file-upload {
+            display: none;
+        }
+    
+        .file-btn, .emoji-btn {
+            background-color: transparent;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            margin-right: 10px;
+        }
+    
+        .file-btn:hover, .emoji-btn:hover {
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="input-container">
+        <button id="file-btn" class="file-btn">📎</button>
+        <button id="emoji-btn" class="emoji-btn">😊</button>
+        <input type="text" id="user-input" placeholder="Type a message..." />
+        <input type="file" id="file-upload" class="file-upload" style="display:none" />
+    </div>
+    
+    
+<script>
+        document.getElementById('emoji-btn').addEventListener('click', function () {
+        const emoji = '😊'; // You can change or add more emojis
+        const userInput = document.getElementById('user-input');
+        userInput.value += emoji; // Insert emoji at the cursor position
+        userInput.focus(); // Keep focus on input
+    });
+
+    // File Upload Button Functionality
+    document.getElementById('file-btn').addEventListener('click', function () {
+        document.getElementById('file-upload').click(); // Trigger file input click
+    });
+
+    // Handle File Upload
+    document.getElementById('file-upload').addEventListener('change', function (event) {
+        const file = event.target.files[0]; // Get the first file
+        if (file) {
+            alert(`File selected: ${file.name}`); // You can handle file upload here
+        }
+    });
+</script>
+
+</body>
+</html>
