@@ -22,12 +22,6 @@ fetch("http://13.61.143.104/updated_template/")  // Fixed the URL
         script.src = "http://13.61.143.104/static/js/updated_bot.js";
         script.onload = function () {
             console.log("✅ Chatbot script loaded, initializing chat history...");
-
-            if (typeof window.loadChatHistory === "function") {
-                window.loadChatHistory();
-            } else {
-                console.error("❌ loadChatHistory function not found. Ensure it's defined in updated_bot.js.");
-            }
         };
 
         script.onerror = function () {
