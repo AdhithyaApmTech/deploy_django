@@ -906,7 +906,7 @@ async function getApiResponse(userInput) {
     }
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/chat-widget/', {
+        const response = await fetch('http://13.61.143.104/chat-widget/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
